@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="ar">
+    <body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <body>
+    <h1 class="luxury-title">
+      Ramallah Map Viewer
+    </h1>
+    
+    <title>Ramallah Map Viewer</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/proj4@2.7.5/dist/proj4.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Arial', sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        animation: backgroundMove 30s infinite linear;
+        background-size: cover;
+      }
+    
+      /* الخلفية المتحركة مع تأثير الانتقال البطيء */
+      @keyframes slowBackgroundMove {
+        0% {
+          background-image: url('https://www.ramallah.ps/userfiles/server/slider/side_view.jpg');
+          background-size: cover;
+          background-position: center;
+          opacity: 1;
+        }
+        33% {
+          background-image: url('https://www.climamed.eu/wp-content/uploads/2021/03/Ramallah-3.jpg');
+          background-size: cover;
+          background-position: center;
+          opacity: 1;
+        }
+        66% {
+          background-image: url('https://www.aliqtisadi.ps//public/files/media/1406477824.jpg');
+          background-size: cover;
+          background-position: center;
+          opacity: 1;
+        }
+        100% {
+          background-image: url('https://www.bnews.ps/sites/default/files/styles/inner_main/public/images/news/2021-04/newsGallery-16159710337431.jpeg?itok=AcSWU2dG');
+          background-size: cover;
+          background-position: center;
+          opacity: 1;
+        }
+      }
+    
+      /* تعيين الحركة البطيئة مع تأثير الانتقال السلس */
+      body {
+        animation: slowBackgroundMove 30s infinite ease-in-out;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        overflow: hidden;
+        transition: background-image 2s ease-in-out; /* تغيير الخلفية بسلاسة */
+      }
+    
+      /* النص فوق الخلفية */
+      .luxury-title {
+        position: absolute;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 4vw; /* حجم أصغر للنص */
+        font-weight: bold;
+        background: linear-gradient(45deg, #1e3d58, #3498db); /* ألوان واضحة */
+      -webkit-background-clip: text;
+        color: transparent;
+        z-index: 10;
+        text-shadow: 0 0 10px rgba(16, 34, 88, 0.5), 0 0 20px rgba(52, 152, 219, 0.3); /* تأثير نص بسيط */
+        animation: luxury-glow 6s ease-in-out infinite;
+        letter-spacing: 2px;
+        white-space: nowrap;
+      }
+    
+      /* تأثير اللمعان الفاخر للنص مع تأثير أخف */
+      @keyframes luxury-glow {
+        0% {
+          text-shadow: 0 0 5px #0d7402, 0 0 20px #a61c8b, 0 0 30px #3498db;
+        }
+        50% {
+          text-shadow: 0 0 5px #dd0505, 0 0 40px #061824, 0 0 60px #06c160;
+        }
+        100% {
+          text-shadow: 0 0 5px #1e3d58, 0 0 20px #0583f0, 0 0 30px #c0ced8;
+        }
+      }
+
+
+    #map {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 3;
+      display: none;
+    }
+
+    .nav-links {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 30px;
+      z-index: 4;
+    }
+
+    .nav-links a {
+      color: white;
+      font-size: 20px;
+      text-decoration: none;
+      font-weight: bold;
+      position: relative;
+    }
+
+    .nav-links a:hover {
+      color: #6c5ce7;
+      text-decoration: underline;
+    }
+
+    .tooltip {
+      display: none;
+      position: absolute;
+      top: 25px;
+      left: 0;
+      background-color: #d0d7e3;
+      border: 1px solid #ccc;
+      padding: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 5;
+      font-size: 14px;
+      color: #333;
+      border-radius: 8px;
+      width: 200px;
+      text-align: right;
+    }
+
+    .nav-links a:hover .tooltip {
+      display: block;
+    }
+
+    .login-button {
+      padding: 15px 30px;
+      font-size: 20px;
+      color: rgb(255, 255, 255);
+      background-color: transparent;
+      border: none;
+      cursor: pointer;
+      z-index: 2;
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
+    .login-button:hover {
+      color: #b4e75c;
+      transform: scale(1.1);
+    }
+
+    .start-button, .map-button {
+      padding: 15px 30px;
+      font-size: 20px;
+      background: #8eedb7;
+      color: rgb(228, 16, 44);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.3s, background 0.3s;
+      z-index: 2;
+      margin: 10px;
+    }
+
+    .start-button:hover, .map-button:hover {
+      background: #36f407;
+      color: #2d3436;
+      transform: scale(1.1);
+    }
+
+    .map-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 5;
+      font-size: 30px;
+      color: #65e75c;
+      cursor: pointer;
+    }
+
+    .map-icon:hover {
+      color: #81ecec;
+    }
+
+    .icons-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      display: none;
+    }
+
+    .icon-btn {
+      font-size: 40px;
+      padding: 25px;
+      background: linear-gradient(45deg, #25cb0f, #f10404);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.3s, background 0.3s;
+      display: block;
+      text-align: center;
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.1);
+      background: linear-gradient(45deg, #81ecec, #6c5ce7);
+    }
+
+    .icon-label {
+      font-size: 14px;
+      color: white;
+      margin-top: 10px;
+    }
+
+  #subIconsContainer {
+  display: flex;
+  flex-direction: column;  /* ترتيب الأيقونات بشكل عمودي */
+  gap: 20px;
+  padding: 20px;
+}
+
+.sub-icon-card {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  font-size: 16px;
+  transition: all 0.3s ease-in-out;  /* تأثير الانتقال */
+  opacity: 0;  /* بداية الأيقونة تكون مخفية */
+  transform: translateY(20px);  /* بداية الأيقونة تكون تحت */
+}
+
+.sub-icon-card.show {
+  opacity: 1;  /* عند إظهار الأيقونة */
+  transform: translateY(0);  /* رفع الأيقونة إلى مكانها الطبيعي */
+}
+
+.sub-icon {
+  font-size: 40px;
+  color: #4CAF50;
+  margin-bottom: 10px;
+}
+
+.sub-icon-card h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.sub-icon-card p {
+  font-size: 14px;
+  color: #333;
+}
+
+
+
+    .sub-icon-btn {
+      font-size: 30px;
+      padding: 20px;
+      background: linear-gradient(45deg, #72279a, #c104a2);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.3s, background 0.3s;
+      display: block;
+      text-align: center;
+      width: 100px;
+      height: 100px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .sub-icon-btn:hover {
+      transform: scale(1.1);
+      background: linear-gradient(45deg, #6c5ce7, #2b5d15);
+    }
+
+    .sub-icon-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .sub-icon-box {
+      width: 80px;
+      height: 10px;
+      margin-top: 10px;
+      background-color: #6c5ce7;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Modal Window Style */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgb(215, 200, 200);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 6;
+      width: 500px;
+      max-height: 80%;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .modal-content {
+      font-size: 16px;
+      color: #000000;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      padding: 10px;
+      background: #e3e8e9;
+      border-radius: 5px;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 20px;
+      color: #e74c3c;
+      cursor: pointer;
+    }
+      /* تنسيق كل صندوق من الأيقونات */
+  .sub-icon-box {
+    width: 250px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(49, 5, 5, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .sub-icon-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(61, 46, 46, 0.2);
+  }
+  .back-button {
+  padding: 12px 24px; /* زيادة حجم الحواف ليصبح الزر أكبر */
+  margin: 10px;
+  font-size: 18px; /* حجم الخط */
+  font-weight: 600; /* جعل الخط أكثر سمكًا */
+  cursor: pointer;
+  background-color: #007BFF; /* اللون الأزرق */
+  color: white;
+  border: none;
+  border-radius: 12px; /* جعل الزوايا أكثر انحناء */
+  box-shadow: 0 4px 6px rgba(0, 123, 255, 0.3); /* إضافة ظل خفيف للزر */
+  transition: all 0.3s ease; /* تأثير انسيابي عند التفاعل */
+  text-transform: uppercase; /* تحويل النص إلى أحرف كبيرة */
+  letter-spacing: 1px; /* إضافة تباعد بين الحروف */
+  outline: none; /* إزالة الحدود عند التحديد */
+}
+
+.back-button:hover {
+  background-color: #0056b3; /* تغيير اللون عند التمرير */
+  transform: translateY(-3px); /* رفع الزر قليلاً عند التمرير */
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4); /* زيادة الظل عند التمرير */
+}
+
+.back-button:active {
+  transform: translateY(1px); /* الضغط على الزر سيؤدي إلى تحريكه للأسفل */
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2); /* تقليل الظل عند الضغط */
+}
+.app-header {
+  position: absolute; /* جعل الشعار في وضعية مطلقة */
+  top: 0; /* وضع الشعار في أعلى الصفحة */
+  left: 20px; /* المسافة من اليسار */
+  display: flex;
+  justify-content: flex-start; /* محاذاة الشعار إلى اليسار */
+  align-items: center;
+  margin-top: 20px; /* يمكنك تعديل المسافة من الأعلى هنا إذا رغبت */
+}
+
+.app-logo {
+  width: 150px;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+
+
+  </style>
+</head>
+
+<body>
+  <div class="nav-links">
+    <a href="#">About
+      <div class="tooltip">هذا الموقع عبارة عن نبذة صغيرة عن مدينة رام الله.</div>
+    </a>
+    <a href="#">Help
+      <div class="tooltip">للاستفسار والشكاوي التواصل عبر البريد التالي:"remaa@gmail.com".</div>
+    </a>
+  </div>
+
+<!-- إضافة الشعار -->
+<header class="app-header">
+  <img src="https://ramallah.ps/userfiles/image/RM%20logo-03.jpg" alt="شعار التطبيق" class="app-logo">
+</header>
+
+<!-- زر تسجيل الدخول -->
+<button class="login-button" onclick="showLoginModal()">
+  <i class="fas fa-sign-in-alt"></i> Log in
+</button>
+
+<!-- زر استكشاف رام الله -->
+<button class="start-button" onclick="showIconsModal()">
+  <i class="fas fa-map"></i> Explore Ramallah
+</button>
+
+<!-- زر الخريطة -->
+<button class="map-button" onclick="showMap()">
+  <i class="fas fa-map-pin"></i> Map
+</button>
+
+<!-- زر الخريطة (أيقونة) -->
+<i class="fas fa-map-marker-alt map-icon" onclick="showMap()"></i>
+
+<!-- تحميل مكتبة الأيقونات Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+  <i class="fas fa-map-marker-alt map-icon" onclick="showMap()"></i>
+
+  <div id="map"></div>
+  <!-- Modal Window for Login -->
+<div id="loginModal" class="modal">
+    <span class="close-modal" onclick="closeLoginModal()">×</span>
+    <div class="modal-header">تسجيل الدخول</div>
+    <form id="loginForm">
+      <div class="input-group">
+        <label for="name">الاسم:</label>
+        <input type="text" id="name" name="name" required placeholder="أدخل اسمك">
+      </div>
+      <div class="input-group">
+        <label for="email">البريد الإلكتروني:</label>
+        <input type="email" id="email" name="email" required placeholder="أدخل بريدك الإلكتروني">
+      </div>
+      <div class="input-group">
+        <label for="password">كلمة المرور:</label>
+        <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+      </div>
+      <button type="submit" class="submit-button">تسجيل الدخول</button>
+    </form>
+  </div>
+  
+  <script>
+    // Show the login modal when clicking on the login button
+    function showLoginModal() {
+      document.getElementById('loginModal').style.display = 'block';
+    }
+  
+    // Close the login modal
+    function closeLoginModal() {
+      document.getElementById('loginModal').style.display = 'none';
+    }
+  
+    // Handle the form submission
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent the form from submitting the traditional way
+  
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+  
+      // You can now use the entered data (for example, save it or send it to a server)
+      alert(`تم تسجيل الدخول بنجاح!\nالاسم: ${name}\nالبريد الإلكتروني: ${email}`);
+  
+      closeLoginModal(); // Close the modal after submission
+    });
+  </script>
+  
+  <style>
+    /* Modal Window Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.85);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      width: 400px;
+      animation: modalEntrance 0.5s ease-out;
+      color: #fff;
+    }
+  
+    /* Modal entrance animation */
+    @keyframes modalEntrance {
+      0% {
+        transform: translate(-50%, -100%);
+      }
+      100% {
+        transform: translate(-50%, -50%);
+      }
+    }
+  
+    /* Close button */
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 25px;
+      color: #fff;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+  
+    .close-modal:hover {
+      color: #e74c3c;
+    }
+  
+    /* Modal Header */
+    .modal-header {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+  
+    /* Form input groups */
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+  
+    .input-group label {
+      font-size: 16px;
+      margin-bottom: 8px;
+      display: block;
+    }
+  
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      background-color: #2c3e50;
+      color: white;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+  
+    .input-group input:focus {
+      border-color: #81ecec;
+    }
+  
+    /* Submit button */
+    .submit-button {
+      width: 100%;
+      padding: 12px;
+      background-color: #6c5ce7;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+  
+    .submit-button:hover {
+      background-color: #81ecec;
+      transform: scale(1.05);
+    }
+  </style>
+  
+<!-- Modal Window -->
+<div id="modal" class="modal">
+  <span class="close-modal" onclick="closeModal()">×</span>
+  <div class="modal-header">محتوى الأيقونة</div>
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<style>
+  /* خلفية المودال الظلال */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 600px;
+    background-color: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.5s ease-out;
+    border-radius: 15px; /* لتنعيم حواف المودال */
+  }
+
+  /* تأثير التلاشي عند الفتح */
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  /* نافذة مودال */
+  .modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
+    transform: translateY(-30px);
+    animation: modalSlideIn 0.5s ease-out;
+    color: #333;
+    font-size: 18px;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  /* تأثير انزلاق عند الفتح */
+  @keyframes modalSlideIn {
+    0% {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* رأس المودال */
+  .modal-header {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #2e3a59;
+    font-family: 'Arial', sans-serif;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 10px;
+  }
+
+  /* إغلاق المودال */
+  .close-modal {
+    color: #fff;
+    font-size: 35px;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    padding: 5px;
+  }
+
+  .close-modal:hover {
+    color: #ff4444;
+    background-color: #fff;
+  }
+
+  /* إخفاء العناصر الأخرى عند فتح المودال */
+  body.modal-open {
+    overflow: hidden;
+  }
+
+  /* جعل المودال يظهر عندما يتم تفعيله */
+  .modal.show {
+    display: flex;
+  }
+  
+  /* تأثير زر الإغلاق */
+  .close-modal:hover {
+    transform: scale(1.2);
+    transition: all 0.3s ease;
+  }
+
+/* خلفية الشاشة أثناء ظهور المودال */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(50, 50, 50, 0.7));
+    backdrop-filter: blur(8px); /* تأثير التمويه */
+    z-index: 999;
+    display: none;
+    animation: fadeIn 0.5s ease-in-out; /* تأثير ظهور ناعم */
+}
+
+/* تأثير الظهور */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+  .modal-overlay.show {
+    display: block;
+  }
+</style>
+
+<script>
+  // فتح المودال
+  function openModal(content) {
+    document.getElementById('modalContent').innerHTML = content;
+    document.getElementById('modal').classList.add('show');
+    document.body.classList.add('modal-open');
+    document.getElementById('overlay').classList.add('show'); // إظهار الخلفية الداكنة
+  }
+
+  // إغلاق المودال
+  function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.body.classList.remove('modal-open');
+    document.getElementById('overlay').classList.remove('show'); // إخفاء الخلفية الداكنة
+  }
+</script>
+
+<!-- خلفية داكنة للمودال -->
+<div id="overlay" class="modal-overlay"></div>
+
+<!-- حاوية الأزرار -->
+<div style="position: fixed; top: 10px; left: 50%; z-index: 1500; display: flex; gap: 30px; transform: translateX(-50%);">
+
+  <!-- زر البحث -->
+  <button id="searchButton" style="padding: 12px 35px; background: linear-gradient(135deg, #ff6a00, #ff9966); color: #fff; border: 2px solid transparent; border-radius: 50px; font-size: 16px; font-weight: 600; transition: all 0.4s ease; box-shadow: 0 10px 30px rgba(255, 105, 0, 0.3), 0 4px 10px rgba(255, 105, 0, 0.2); cursor: pointer; transform: scale(1); font-family: 'Arial', sans-serif; text-transform: uppercase; display: none; outline: none;">
+    <i class="fas fa-search" style="margin-right: 8px;"></i> بحث
+  </button>
+
+  <!-- زر حساب المسافة -->
+  <button id="distanceButton" style="padding: 12px 35px; background: linear-gradient(135deg, #42a5f5, #1e88e5); color: #fff; border: 2px solid transparent; border-radius: 50px; font-size: 16px; font-weight: 600; transition: all 0.4s ease; box-shadow: 0 10px 30px rgba(66, 165, 245, 0.3), 0 4px 10px rgba(66, 165, 245, 0.2); cursor: pointer; transform: scale(1); font-family: 'Arial', sans-serif; text-transform: uppercase; display: none; outline: none;">
+    <i class="fas fa-ruler-combined" style="margin-right: 8px;"></i> حساب المسافة
+  </button>
+
+  <!-- زر المسح -->
+  <button id="clearButton" style="padding: 12px 35px; background: linear-gradient(135deg, #f44336, #d32f2f); color: #fff; border: 2px solid transparent; border-radius: 50px; font-size: 16px; font-weight: 600; transition: all 0.4s ease; box-shadow: 0 10px 30px rgba(244, 67, 54, 0.3), 0 4px 10px rgba(244, 67, 54, 0.2); cursor: pointer; transform: scale(1); font-family: 'Arial', sans-serif; text-transform: uppercase; display: none; outline: none;">
+    <i class="fas fa-eraser" style="margin-right: 8px;"></i> مسح
+  </button>
+
+</div>
+
+<!-- إضافة تأثيرات خاصة عند التمرير -->
+<style>
+  #searchButton:hover, #distanceButton:hover, #clearButton:hover {
+    transform: scale(1.1);  /* تكبير الزر بشكل تدريجي عند التمرير */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);  /* تأثير الظل القوي */
+    transition: all 0.3s ease;  /* تأثير سلاسة التحويل */
+    animation: glow 1.5s ease infinite;  /* تأثير اللمعان الديناميكي */
+  }
+
+  #searchButton:focus, #distanceButton:focus, #clearButton:focus {
+    outline: none;  /* إزالة التأثير الافتراضي عند الضغط */
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.8);  /* توهج برتقالي ناعم عند الضغط */
+  }
+
+  /* تأثير اللمعان عند التمرير */
+  @keyframes glow {
+    0% { box-shadow: 0 0 10px rgba(255, 105, 0, 0.8); }
+    50% { box-shadow: 0 0 20px rgba(255, 165, 0, 1); }
+    100% { box-shadow: 0 0 10px rgba(255, 105, 0, 0.8); }
+  }
+
+  #searchButton:hover {
+    background: linear-gradient(135deg, #ff6a00, #ff9966);  /* تأثير لوني دافئ وجذاب */
+  }
+
+  #distanceButton:hover {
+    background: linear-gradient(135deg, #42a5f5, #1e88e5);  /* تأثير لوني بارد وجميل */
+  }
+
+  #clearButton:hover {
+    background: linear-gradient(135deg, #f44336, #d32f2f);  /* تأثير لوني دافئ ومميز */
+  }
+</style>
+
+<!-- خريطة -->
+<div id="map" style="height: 500px;"></div>
+
+<script>
+  let geoJsonLayers = []; // مصفوفة لتخزين الطبقات GeoJSON
+
+  function showMap() {
+    // إخفاء العنوان
+    document.querySelector("h1").style.display = 'none';
+    
+    // عرض الخريطة
+    document.getElementById('map').style.display = 'block';
+
+    // إذا لم تكن الخريطة موجودة، قم بإنشائها
+    if (!window.mapInstance) {
+        window.mapInstance = L.map('map').setView([31.9496, 35.2075], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(window.mapInstance);
+    }
+// دالة لحساب المسافة بين نقطتين باستخدام صيغة Haversine
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // نصف قطر الأرض بالكيلومتر
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // المسافة بالكيلومتر
+}
+    // إظهار الأزرار بعد تحميل الخريطة
+    document.getElementById('searchButton').style.display = 'block';
+    document.getElementById('distanceButton').style.display = 'block';
+    document.getElementById('clearButton').style.display = 'block'; // إظهار زر المسح
+
+    // زر حساب المسافة
+    let calculateDistanceMode = false; // وضع حساب المسافة
+    let selectedPoints = []; // مصفوفة لتخزين النقاط التي تم تحديدها
+    let polyline = null; // المسار بين النقاط
+    let markers = []; // مصفوفة لتخزين العلامات المضافة أثناء الحساب
+
+  // عند الضغط على زر حساب المسافة
+document.getElementById('distanceButton').addEventListener('click', function() {
+    calculateDistanceMode = !calculateDistanceMode;
+    selectedPoints = []; // إعادة تعيين النقاط المحددة
+    if (polyline) {
+        window.mapInstance.removeLayer(polyline); // إزالة المسار السابق إذا كان موجودًا
+    }
+    alert('تم تفعيل وضع حساب المسافة. اختر نقطتين على الخريطة.');
+});
+
+    // وظيفة البحث
+   document.getElementById('searchButton').addEventListener('click', function() {
+    const address = prompt("أدخل العنوان أو الموقع للبحث عنه:");
+
+    if (address) {
+        // البحث ضمن طبقات JSON المحملة مسبقاً
+        let foundLocation = null;
+
+        // ابحث في كل طبقة تم تحميلها من ملفات JSON
+        geoJsonLayers.forEach(layer => {
+            layer.eachLayer(function(marker) {
+                const feature = marker.feature;
+
+                // ابحث في جميع الخصائص داخل feature.properties
+                for (const [key, value] of Object.entries(feature.properties)) {
+                    if (typeof value === 'string' && value.toLowerCase().includes(address.toLowerCase())) {
+                        foundLocation = marker;
+                        // تغيير عرض الخريطة على الموقع المحدد
+                        window.mapInstance.setView(marker.getLatLng(), 13);
+                        marker.openPopup(); // فتح الـ popup للموقع
+                        break;  // إنهاء البحث بعد العثور على أول تطابق
+                    }
+                }
+            });
+        });
+
+        // إذا لم يتم العثور على الموقع
+        if (!foundLocation) {
+            alert("لم يتم العثور على الموقع في الملفات.");
+        }
+    }
+});
+   // إضافة طبقات JSON مع تخصيص الرموز
+const addGeoJsonLayer = (url, layerName, iconUrl) => {
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to load ${url}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const geoJson = {
+                type: "FeatureCollection",
+                features: data.features.map(feature => {
+                    return {
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [feature.geometry.x, feature.geometry.y],
+                        },
+                        properties: feature.attributes,
+                    };
+                }),
+            };
+
+            const customIcon = L.icon({
+                iconUrl: iconUrl,
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40] 
+            });
+
+            const layer = L.geoJSON(geoJson, {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, { icon: customIcon });
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                        // إنشاء HTML للـ popup مع جدول منسق
+                        let info = `<div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center;">`;
+
+                        // العنوان
+                        info += `<h3 style="color: #4CAF50;">${feature.properties.Name || 'غير معروف'}</h3>`;
+
+                        // الجدول
+                        info += `<table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                                    <tr style="background-color: #4CAF50; color: white;">
+                                        <th style="padding: 10px; border: 1px solid #ddd;">الخاصية</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">القيمة</th>
+                                    </tr>`;
+                                    
+                        // إضافة البيانات داخل الجدول
+                        for (const [key, value] of Object.entries(feature.properties)) {
+                            if (key !== 'Name') { // تجنب عرض "Name" مرة أخرى
+                                info += `<tr style="background-color: #f9f9f9;">
+                                            <td style="padding: 8px; border: 1px solid #ddd; color: #333; font-weight: bold;">${key}:</td>
+                                            <td style="padding: 8px; border: 1px solid #ddd; color: #333;">${value}</td>
+                                          </tr>`;
+                            }
+                        }
+                        
+                        info += `</table>`;
+                        info += `</div>`;
+                        
+                        // ربط الـ popup بالطبقة
+                        layer.bindPopup(info);
+
+                        // تفعيل حساب المسافة عند النقر
+                        layer.on('click', function(e) {
+                            alert(`تم اختيار: ${feature.properties.Name || 'غير معروف'}`);
+                            if (calculateDistanceMode) {
+                                selectedPoints.push(e.latlng); // إضافة النقطة المحددة إلى المصفوفة
+
+                                // إذا كان هناك نقطتين على الأقل
+                                if (selectedPoints.length > 1) {
+                                    // رسم المسار بين النقاط
+                                    if (polyline) {
+                                        window.mapInstance.removeLayer(polyline); // إزالة المسار السابق
+                                    }
+                                    polyline = L.polyline(selectedPoints, { color: 'blue' }).addTo(window.mapInstance);
+                                    
+                                    // حساب المسافة بين النقاط
+                                    const distance = selectedPoints[selectedPoints.length - 2].distanceTo(selectedPoints[selectedPoints.length - 1]) / 1000; // بالكيلومترات
+                                    alert(`المسافة بين النقاط: ${distance.toFixed(2)} كم`);
+
+                                    // حساب الوقت بناءً على سرعة 60 كم/س
+                                    const speed = 60; // سرعة في الكيلومترات في الساعة
+                                    const time = distance / speed * 60; // الوقت بالدقائق
+                                    alert(`الوقت الذي سيستغرقه الانتقال بين النقطتين: ${time.toFixed(2)} دقيقة`);
+                                }
+
+                                // إضافة علامة لكل نقطة على الخريطة
+                                const marker = L.marker(e.latlng).addTo(window.mapInstance).bindPopup(`النقطة ${selectedPoints.length} تم تحديدها`).openPopup();
+                                markers.push(marker); // إضافة العلامة إلى المصفوفة
+                            }
+                        });
+                    }
+                },
+            });
+
+            // إضافة الطبقة إلى الخريطة
+            layer.addTo(window.mapInstance);
+            geoJsonLayers.push(layer); // تخزين الطبقة في مصفوفة
+        })
+        .catch(error => console.error(`Error loading ${layerName}:`, error));
+};
+
+// تحميل الطبقات من الملفات JSON
+addGeoJsonLayer('./Schools_FeaturesToJSON.json', 'Schools', 'https://cdn-icons-png.flaticon.com/512/167/167707.png'); // رمز لوح الكتابة
+addGeoJsonLayer('./HealthFacititiesToJSON.json', 'Health Facilities', 'https://w7.pngwing.com/pngs/203/597/png-transparent-hospital-logo-icon-hospital-signs-other-medicine-product-design-thumbnail.png'); // رمز مستشفى
+    const proj28191 = '+proj=tmerc +lat_0=31.73439361111111 +lon_0=35.21208055555556 +k=1.000017 +x_0=170251.555 +y_0=126234.55 +datum=GRS80 +units=m +no_defs';
+
+// Fetch the data from JSON file
+fetch('landmarkv3ToJSON.json')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('فشل في تحميل ملف JSON');
+        }
+        return response.json();
+    })
+    .then(jsonData => {
+        const features = jsonData.features;
+
+        // Define custom icon for all markers
+        const customIcon = L.icon({
+            iconUrl: 'https://png.pngtree.com/png-clipart/20200701/original/pngtree-tourist-landmark-location-png-image_5408434.jpg', // وضع مسار الأيقونة المخصصة هنا
+            iconSize: [40, 40], // حجم الأيقونة
+            iconAnchor: [20, 40], // نقطة الربط للأيقونة
+            popupAnchor: [0, -40] // موقع النافذة المنبثقة بالنسبة للأيقونة
+        });
+
+        features.forEach(feature => {
+            const { x, y } = feature.geometry; // Extract x, y
+            const [longitude, latitude] = proj4(proj28191, proj4.defs['EPSG:4326'], [x, y]); // Reproject to WGS84
+
+            // Extract the image URLs from the feature attributes (assuming it's in 'IMAGE_URLS')
+            const imageUrls = feature.attributes.IMAGE_URLS || []; // Get the array of image URLs, default to an empty array if not present
+
+            // Generate the HTML for images with better styling
+            const imageHtml = imageUrls.map(url => {
+                return `<img src="${url}" alt="Business Image" style="width: 100%; height: auto; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">`;
+            }).join(''); // Join all image tags into one string
+
+            // Add a marker with the custom icon to the map
+            const marker = L.marker([latitude, longitude], { icon: customIcon }).addTo(window.mapInstance);
+
+            // Bind a popup with business details and images
+            marker.bindPopup(`
+                <div style="font-family: 'Arial', sans-serif; color: #333; padding: 15px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); max-width: 300px;">
+                    <h2 style="color: #007BFF; font-size: 18px; text-align: center; margin-bottom: 10px;">${feature.attributes.BUSNIESS_1}</h2>
+                    <div style="border-bottom: 2px solid #007BFF; margin-bottom: 10px;"></div>
+                    <p style="font-size: 14px; color: #555;">
+                        <strong>الاسم باللغة العربية:</strong> ${feature.attributes.BUSNIESS_N}<br>
+                        <strong>Business Name (English):</strong> ${feature.attributes.BUSNIESS_1}<br>
+                    </p>
+                    <div style="border-top: 2px solid #007BFF; margin: 10px 0;"></div>
+                    <div style="font-size: 13px; color: #666; text-align: center;">
+                        <strong>Image Gallery:</strong><br>
+                        ${imageHtml}
+                    </div>
+                </div>
+            `);
+        });
+
+        // Adjust the map to fit all markers
+        const latLngs = features.map(feature => {
+            const { x, y } = feature.geometry;
+            const [longitude, latitude] = proj4(proj28191, proj4.defs['EPSG:4326'], [x, y]);
+            return [latitude, longitude];
+        });
+
+        window.mapInstance.fitBounds(latLngs);
+    })
+    .catch(error => {
+        console.error('Error loading the JSON file:', error);
+    });
+   
+    // وظيفة المسح عند الضغط على زر المسح
+    document.getElementById('clearButton').addEventListener('click', function() {
+        // مسح المسار المحدد والنقاط
+        selectedPoints = [];
+        if (polyline) {
+            window.mapInstance.removeLayer(polyline); // إزالة المسار
+        }
+
+        // إزالة العلامات المضافة أثناء حساب المسافة
+        markers.forEach(marker => {
+            window.mapInstance.removeLayer(marker); // إزالة العلامة
+        });
+
+        // مسح العلامات
+        markers = []; // إعادة تعيين مصفوفة العلامات
+
+        alert('تم مسح المسار والنقاط المحددة.');
+
+        // لا نقوم بمسح البيانات الأخرى (GeoJSON layers)
+        geoJsonLayers.forEach(layer => {
+            layer.addTo(window.mapInstance); // إعادة إضافة الطبقات المحملة إلى الخريطة إذا كانت قد أزيلت
+        });
+    });
+
+
+    // السؤال إذا كان المستخدم يسمح بتحديد موقعه
+    const permission = confirm("Do you allow access to your site Location?");
+
+    if (permission) {
+        // إذا وافق المستخدم، نحاول الحصول على الموقع
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                // الحصول على إحداثيات الموقع
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                // تحديد الموقع على الخريطة
+                window.mapInstance.setView([lat, lon], 13);0
+                const marker = L.marker([lat, lon]).addTo(window.mapInstance);
+                
+                // استخدام خدمة Reverse Geocoding للحصول على العنوان بناءً على الإحداثيات
+                const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+                fetch(geocodeUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.address) {
+                            const address = data.address;
+                            const addressString = `${address.road || ''}, ${address.city || ''}, ${address.state || ''}`;
+                            
+                            // عرض العنوان
+                            marker.bindPopup(`<b>موقعك:</b><br>${addressString}`).openPopup();
+                        }
+                    })
+                    .catch(error => console.error("Error fetching address:", error));
+            }, function(error) {
+                console.error("Geolocation error:", error);
+            }, {
+                enableHighAccuracy: true,  // تفعيل دقة الموقع العالية
+                timeout: 10000,            // تعيين وقت الانتظار للحصول على الموقع
+                maximumAge: 0              // عدم استخدام الموقع المخزن مسبقًا
+            });
+        } else {
+            alert("المتصفح لا يدعم تحديد الموقع.");
+        }
+    } else {
+        // إذا رفض المستخدم، عرض رسالة
+        alert("لن نتمكن من تحديد موقعك.");
+    }
+}
+
+
+let currentIconsContainer = null;
+let currentSubIconsContainer = null;
+let previousContainer = null; // لتخزين الطبقة السابقة
+
+function showIconsModal() {
+  // تخزين الطبقة الحالية قبل التبديل
+  previousContainer = currentIconsContainer;
+
+  document.querySelector('.start-button').style.display = 'none';
+  document.querySelector('.map-button').style.display = 'none';
+  document.querySelector('.luxury-title').style.display = 'none';
+
+  const title = document.querySelector('.page-title');
+  if (title) title.style.display = 'none';
+
+  if (currentIconsContainer) {
+    currentIconsContainer.style.display = 'none';
+  }
+
+  if (currentSubIconsContainer) {
+    currentSubIconsContainer.style.display = 'none';
+  }
+
+  const iconsContainer = document.createElement('div');
+  iconsContainer.className = 'icons-container';
+  currentIconsContainer = iconsContainer;
+
+  const icons = [
+    { icon: 'fas fa-city', label: 'عن المدينة', action: showSubIconsCity },
+    { icon: 'fas fa-landmark', label: 'رام الله قديما وحديثا', action: showSubIconsHistory },
+    { icon: 'fas fa-hospital', label: 'المستشفيات', action: showSubIconsHospitals },
+    { icon: 'fas fa-school', label: 'المدارس', action: showSubIconsSchools },
+    { icon: 'fas fa-map-marked-alt', label: 'المعالم', action: showSubIconsLandmarks }
+  ];
+
+  icons.forEach(item => {
+    const iconBtn = document.createElement('button');
+    iconBtn.className = 'icon-btn';
+    iconBtn.innerHTML = `<i class="${item.icon}"></i><div class="icon-label">${item.label}</div>`;
+    iconBtn.onclick = () => {
+      previousContainer = currentIconsContainer;
+      hideAllSubIcons();
+      item.action();
+    };
+    iconsContainer.appendChild(iconBtn);
+  });
+
+  const backButton = document.createElement('button');
+  backButton.className = 'back-button';
+  backButton.innerText = 'رجوع';
+  backButton.onclick = goBack;
+  iconsContainer.appendChild(backButton);
+
+  document.body.appendChild(iconsContainer);
+  iconsContainer.style.display = 'flex';
+}
+
+function goBack() {
+  if (previousContainer) {
+    if (currentIconsContainer) {
+      currentIconsContainer.style.display = 'none';
+    }
+    if (currentSubIconsContainer) {
+      currentSubIconsContainer.style.display = 'none';
+    }
+    previousContainer.style.display = 'flex';
+    currentIconsContainer = previousContainer;
+    previousContainer = null;
+  } else {
+    document.querySelector('.start-button').style.display = 'block';
+    document.querySelector('.map-button').style.display = 'block';
+    document.querySelector('.luxury-title').style.display = 'block';
+
+    const title = document.querySelector('.page-title');
+    if (title) title.style.display = 'block';
+
+    if (currentIconsContainer) {
+      currentIconsContainer.style.display = 'none';
+    }
+
+    if (currentSubIconsContainer) {
+      currentSubIconsContainer.style.display = 'none';
+    }
+  }
+}
+
+function showSubIconsCity() {
+  hideAllSubIcons();
+  const subIcons = [
+    { icon: 'fas fa-map-signs', label: 'تسمية رام الله', content: ' "يعود اسم رام الله..."' },
+    { icon: 'fas fa-globe', label: 'جغرافية رام الله', content: ' تقع مدينة رام الله في الضفة الغربية...' },
+    { icon: 'fas fa-building', label: 'بلدات مدينة رام الله', content: ' أبو شخيدم، أبو قش ...' }
+  ];
+  displaySubIcons(subIcons);
+}
+
+function showSubIconsHistory() {
+  hideAllSubIcons();
+  const subIcons = [
+    { icon: 'fas fa-landmark', label: 'تاريخ رام الله', content: ' رام الله مرّت بعدة مراحل من التطور...' },
+    { icon: 'fas fa-city', label: 'التطور العمراني', content: ' كانت رام الله قديماً قرية صغيرة...' }
+  ];
+  displaySubIcons(subIcons);
+}
+
+function showSubIconsHospitals() {
+  hideAllSubIcons();
+  const subIcons = [
+    { icon: 'fas fa-hospital', label: 'مستشفى رام الله', content: ' مستشفى رام الله هو أحد أكبر المستشفيات في المدينة...' },
+    { icon: 'fas fa-stethoscope', label: 'مستشفى الهلال', content: ' مستشفى الهلال هو مستشفى كبير يقدم العديد من الخدمات الطبية...' }
+  ];
+  displaySubIcons(subIcons);
+}
+
+function showSubIconsSchools() {
+  hideAllSubIcons();
+  const subIcons = [
+    { icon: 'fas fa-school', label: 'مدارس رام الله الحكومية', content: ' تعتبر مدرسة رام الله من أقدم المدارس في المدينة...' },
+    { icon: 'fas fa-graduation-cap', label: 'مدارس رام الله الخاصة', content: ' مدرسة الفتيات هي واحدة من أقدم مدارس البنات في رام الله...' }
+  ];
+  displaySubIcons(subIcons);
+}
+
+function showSubIconsLandmarks() {
+  hideAllSubIcons();
+  const subIcons = [
+    { icon: 'fas fa-map-marked-alt', label: 'معالم رام الله', content: ' تحتوي رام الله على العديد من المعالم السياحية الجميلة...' },
+    { icon: 'fas fa-camera', label: 'الأماكن السياحية', content: ' هناك العديد من الأماكن السياحية التي تستحق الزيارة في رام الله...' }
+  ];
+  displaySubIcons(subIcons);
+}
+
+function displaySubIcons(subIcons) {
+  const subIconsContainer = document.createElement('div');
+  subIconsContainer.className = 'sub-icons-container';
+  currentSubIconsContainer = subIconsContainer;
+
+  subIcons.forEach(item => {
+    const subIconBtn = document.createElement('button');
+    subIconBtn.className = 'sub-icon-btn';
+    subIconBtn.innerHTML = `<i class="${item.icon}"></i><div class="icon-label">${item.label}</div>`;
+    subIconBtn.onclick = () => openModal(item.content);
+    subIconsContainer.appendChild(subIconBtn);
+  });
+
+  document.body.appendChild(subIconsContainer);
+  subIconsContainer.style.display = 'flex';
+}
+
+function hideAllSubIcons() {
+  const subIconsContainers = document.querySelectorAll('.sub-icons-container');
+  subIconsContainers.forEach(container => container.style.display = 'none');
+}
+
+function openModal(content) {
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent');
+  modal.style.display = 'block';
+  modalContent.textContent = content;
+}
+
+function closeModal() {
+  const modal = document.getElementById('modal');
+  modal.style.display = 'none';
+}
+
+  </script>
+</body>
+
+</html>
